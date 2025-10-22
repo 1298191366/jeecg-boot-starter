@@ -2,15 +2,16 @@
 //
 //import com.alibaba.fastjson.JSONObject;
 //import dev.langchain4j.agent.tool.ToolExecutionRequest;
+//import dev.langchain4j.agent.tool.ToolSpecification;
 //import dev.langchain4j.data.message.AiMessage;
 //import dev.langchain4j.data.message.ChatMessage;
 //import dev.langchain4j.data.message.ToolExecutionResultMessage;
 //import dev.langchain4j.data.message.UserMessage;
 //import dev.langchain4j.mcp.McpToolProvider;
-//import dev.langchain4j.mcp.client.DefaultMcpClient;
-//import dev.langchain4j.mcp.client.McpClient;
+//import dev.langchain4j.mcp.client.*;
 //import dev.langchain4j.mcp.client.transport.McpTransport;
 //import dev.langchain4j.mcp.client.transport.http.HttpMcpTransport;
+//import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport;
 //import dev.langchain4j.model.chat.ChatModel;
 //import dev.langchain4j.model.chat.StreamingChatModel;
 //import dev.langchain4j.model.chat.request.ChatRequest;
@@ -24,16 +25,16 @@
 //import dev.langchain4j.service.tool.ToolExecutor;
 //import dev.langchain4j.service.tool.ToolService;
 //import dev.langchain4j.service.tool.ToolServiceContext;
+//import lombok.extern.slf4j.Slf4j;
 //import org.jeecg.ai.assistant.AiChatAssistant;
 //import org.jeecg.ai.assistant.AiStreamChatAssistant;
 //import org.jeecg.ai.factory.AiModelFactory;
 //import org.jeecg.ai.factory.AiModelOptions;
+//import org.jeecg.ai.prop.AiChatProperties;
 //import org.junit.jupiter.api.Assumptions;
 //import org.junit.jupiter.api.Test;
 //
-//import java.util.ArrayList;
-//import java.util.Collections;
-//import java.util.List;
+//import java.util.*;
 //import java.util.concurrent.CountDownLatch;
 //
 ///**
@@ -48,6 +49,7 @@
 // * @author chenrui
 // * @date 2025/8/21 17:08
 // */
+//@Slf4j
 //public class LLMTest {
 //
 //
@@ -62,7 +64,7 @@
 //    // 根据环境构建模型配置；缺少关键项则返回 null 以便测试跳过
 //    private static AiModelOptions buildModelOptionsFromEnv() {
 //        String baseUrl = "https://api.gpt.ge";
-//        String apiKey = "sk-xxxx";
+//        String apiKey = "sk-xxx";
 //        String modelName = "gpt-4.1-mini";
 //        return AiModelOptions.builder()
 //                .provider(AiModelFactory.AIMODEL_TYPE_OPENAI)
@@ -85,6 +87,86 @@
 //        return McpToolProvider.builder()
 //                .mcpClients(List.of(mcpClient))
 //                .build();
+//    }
+//
+//    // 新增：从本地环境构建通过 stdio 启动的 MCP 客户端（基于 npx @amap/amap-maps-mcp-server）
+//    private static McpClient buildMcpClientStdioFromEnv() {
+//        String apiKey = "719e6c6a3a806cb4ca9648b69d4aa65a";
+//
+//        // Some StdioMcpTransport implementations expect a list command; not all builders expose an env setter.
+//        // Use a shell invocation that sets the environment variable inline so the spawned process sees it.
+//        Map<String,String> env = new HashMap<>();
+//        env.put("AMAP_MAPS_API_KEY", apiKey);
+//        String cmd = "npx -y @amap/amap-maps-mcp-server";
+//        StdioMcpTransport transport = new StdioMcpTransport.Builder()
+//                .command(List.of("/bin/sh", "-c", cmd))
+//                .environment(env)
+//                .build();
+//
+//        return new DefaultMcpClient.Builder()
+//                .transport(transport)
+//                .build();
+//    }
+//
+//    // 保留原方法，但内部使用 McpClient helper
+//    private static McpToolProvider buildMcpToolStdioFromEnv() {
+//        McpClient client = buildMcpClientStdioFromEnv();
+//        if (client == null) {
+//            return null;
+//        }
+//        return McpToolProvider.builder()
+//                .mcpClients(List.of(client))
+//                .build();
+//    }
+//
+//
+//    @Test
+//    void testMcpSource(){
+//        McpTransport transport = new HttpMcpTransport.Builder()
+//                .sseUrl(MCP_SSE_URL_AMAP)
+//                .logRequests(true)
+//                .logResponses(true)
+//                .build();
+//        McpClient mcpClient = new DefaultMcpClient.Builder()
+//                .transport(transport)
+//                .build();
+//        List<ToolSpecification> toolSpecifications = mcpClient.listTools();
+//        System.out.println("工具列表: " + JSONObject.toJSONString(toolSpecifications));
+//        try {
+//            List<McpPrompt> mcpPrompts = mcpClient.listPrompts();
+//            System.out.println("Prompt 列表: " + JSONObject.toJSONString(mcpPrompts));
+//        } catch (Exception e) {
+//        }
+//        try {
+//            List<McpResource> mcpResources = mcpClient.listResources();
+//            System.out.println("资源列表: " + JSONObject.toJSONString(mcpResources));
+//        } catch (Exception e) {
+//        }
+//        try {
+//            List<McpResourceTemplate> mcpResourceTemplates = mcpClient.listResourceTemplates();
+//            System.out.println("资源模板列表: " + JSONObject.toJSONString(mcpResourceTemplates));
+//        } catch (Exception e) {
+//        }
+//    }
+//
+//    // 新增：使用 stdio MCP server（本地 npx 启动）的小型测试用例
+//    @Test
+//    void testMcpWithStdioServer() {
+//        System.out.println("[用例-STDO] Stdio MCP（npx @amap/amap-maps-mcp-server）：如果未设置 AMAP_MAPS_API_KEY 环境变量将跳过。");
+//
+//        McpClient client = buildMcpClientStdioFromEnv();
+//        Assumptions.assumeTrue(client != null, "缺少 AMAP_MAPS_API_KEY，跳过测试");
+//
+//        List<ToolSpecification> toolSpecifications = client.listTools();
+//        System.out.println("STDIO 工具列表: " + JSONObject.toJSONString(toolSpecifications));
+//        try {
+//            List<McpPrompt> prompts = client.listPrompts();
+//            System.out.println("STDIO Prompt 列表: " + JSONObject.toJSONString(prompts));
+//        } catch (Exception ignored) {}
+//        try {
+//            List<McpResource> resources = client.listResources();
+//            System.out.println("STDIO 资源列表: " + JSONObject.toJSONString(resources));
+//        } catch (Exception ignored) {}
 //    }
 //
 //    // 1) 使用 AiChatAssistant 调用 MCP
@@ -248,5 +330,6 @@
 //                .start();
 //        latch.await();
 //    }
+//
 //
 //}

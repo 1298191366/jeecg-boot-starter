@@ -2,11 +2,8 @@ package org.jeecg.ai.handler;
 
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.agent.tool.ToolSpecification;
-import dev.langchain4j.community.model.dashscope.QwenChatModel;
-import dev.langchain4j.community.model.dashscope.QwenChatRequestParameters;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.exception.UnsupportedFeatureException;
-import dev.langchain4j.internal.Utils;
+import dev.langchain4j.mcp.McpToolProvider;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
@@ -24,6 +21,8 @@ import dev.langchain4j.service.AiServiceTokenStreamParameters;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.output.ServiceOutputParser;
 import dev.langchain4j.service.tool.ToolExecutor;
+import dev.langchain4j.service.tool.ToolService;
+import dev.langchain4j.service.tool.ToolServiceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.jeecg.ai.assistant.AiStreamChatAssistant;
@@ -133,6 +132,9 @@ public class LLMHandler {
             });
         }
 
+        // MCP工具解析
+        fillMcpTools(params, chatMessage, toolSpecifications, toolExecutors);
+
         String resp = "";
         log.info("[LLMHandler] send message to AI server. message: {}", chatMessage);
         while (true) {
@@ -218,6 +220,10 @@ public class LLMHandler {
         }
 
         CollateMsgResp chatMessage = collateMessage(messages, params);
+
+        // MCP工具解析
+        fillMcpTools(params, chatMessage, toolSpecifications, toolExecutors);
+
         AiServiceContext context = new AiServiceContext(AiStreamChatAssistant.class);
         context.streamingChatModel = streamingChatModel;
         log.info("[LLMHandler] send message to AI server. message: {}", chatMessage);
@@ -234,6 +240,41 @@ public class LLMHandler {
         }
 
         return new AiServiceTokenStream(parametersBuilder.build());
+    }
+
+    /**
+     * 将 MCP ToolProviders 解析并填充到工具规格与执行器集合中
+     * @param params AI参数
+     * @param chatMessage 整理后的消息对象
+     * @param toolSpecifications 现有工具规格集合(将追加)
+     * @param toolExecutors 现有工具执行器集合(将追加)
+     *
+     * @param params
+     * @param chatMessage
+     * @param toolSpecifications
+     * @param toolExecutors
+     * @author chenrui
+     * @date 2025/10/21 17:34
+     */
+    private void fillMcpTools(AIParams params,
+                              CollateMsgResp chatMessage,
+                              List<ToolSpecification> toolSpecifications,
+                              Map<String, ToolExecutor> toolExecutors) {
+        if (params.getMcpToolProviders() == null || params.getMcpToolProviders().isEmpty()) {
+            return;
+        }
+        for (McpToolProvider toolProvider : params.getMcpToolProviders()) {
+            ToolService toolService = new ToolService();
+            toolService.toolProvider(toolProvider);
+            ToolServiceContext toolCtx = toolService.createContext(chatMessage.chatMemory.id(), chatMessage.userMessage);
+            for (ToolSpecification toolSpec : toolCtx.toolSpecifications()) {
+                ToolExecutor executor = toolCtx.toolExecutors().get(toolSpec.name());
+                if (executor != null) {
+                    toolSpecifications.add(toolSpec);
+                    toolExecutors.put(toolSpec.name(), executor);
+                }
+            }
+        }
     }
 
     /**
@@ -318,7 +359,7 @@ public class LLMHandler {
         }
         // 用户消息
         chatMemory.add(userMessage);
-        return new CollateMsgResp(chatMemory, augmentationResult);
+        return new CollateMsgResp(chatMemory, augmentationResult, userMessage);
     }
 
     /**
@@ -329,10 +370,12 @@ public class LLMHandler {
     private static class CollateMsgResp {
         public final ChatMemory chatMemory;
         public final AugmentationResult augmentationResult;
+        public final UserMessage userMessage;
 
-        public CollateMsgResp(ChatMemory chatMemory, AugmentationResult augmentationResult) {
+        public CollateMsgResp(ChatMemory chatMemory, AugmentationResult augmentationResult, UserMessage userMessage) {
             this.chatMemory = chatMemory;
             this.augmentationResult = augmentationResult;
+            this.userMessage = userMessage;
         }
 
         @Override
