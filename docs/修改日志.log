@@ -105,3 +105,14 @@ jeecg-boot-starter-chatgpt/src/main/java/org/jeecg/ai/handler/LLMHandler.java
 jeecg-boot-starter-chatgpt/src/test/java/org/jeecg/ai/handler/LLMTest.java
 jeecg-boot-starter-chatgpt/pom.xml
 ---author:chenrui---date:2025/10/11-----for:langchain4j升级1.3.0 && 添加mcp单元测试---
+
+---author:chenrui---date:2025/10/14-----for:[issues/8972]通义千问的多模态模型保存激活报错---
+jeecg-boot-starter-chatgpt/src/main/java/org/jeecg/ai/factory/AiModelFactory.java
+jeecg-boot-starter-chatgpt/src/main/java/org/jeecg/ai/handler/LLMHandler.java
+---author:chenrui---date:2025/10/14-----for:[issues/8972]通义千问的多模态模型保存激活报错---
+
+---author:chenrui---date:2025/10/21-----for:[QQYUN-13864]AI聊天，支持MCP---
+jeecg-boot-starter-chatgpt/src/main/java/org/jeecg/ai/handler/LLMHandler.java
+jeecg-boot-starter-chatgpt/src/test/java/org/jeecg/ai/handler/LLMTest.java
+jeecg-boot-starter-chatgpt/src/main/java/org/jeecg/ai/handler/AIParams.java
+---author:chenrui---date:2025/10/21-----for:[QQYUN-13864]AI聊天，支持MCP---
