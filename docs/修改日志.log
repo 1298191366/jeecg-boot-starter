@@ -116,3 +116,8 @@ jeecg-boot-starter-chatgpt/src/main/java/org/jeecg/ai/handler/LLMHandler.java
 jeecg-boot-starter-chatgpt/src/test/java/org/jeecg/ai/handler/LLMTest.java
 jeecg-boot-starter-chatgpt/src/main/java/org/jeecg/ai/handler/AIParams.java
 ---author:chenrui---date:2025/10/21-----for:[QQYUN-13864]AI聊天，支持MCP---
+
+---author:chenrui---date:2025/10/29-----for:[QQYUN-12078]【AI】增加模型厂商支持：Anthropic（claude)---
+src/main/java/org/jeecg/ai/factory/AiModelFactory.java
+pom.xml
+---author:chenrui---date:2025/10/29-----for:[QQYUN-12078]【AI】增加模型厂商支持：Anthropic（claude)---
